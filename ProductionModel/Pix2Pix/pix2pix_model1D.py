@@ -22,12 +22,12 @@ def downsample1D(filters, size, strides = 2, apply_batchnorm=True):
 
   return result
 
-def upsample1D(filters, size, apply_dropout=False):
+def upsample1D(filters, size, strides=2, apply_dropout=False):
   initializer = tf.random_normal_initializer(0., 0.02)
 
   result = tf.keras.Sequential()
   result.add(
-    tf.keras.layers.Conv1DTranspose(filters, size, strides=2,
+    tf.keras.layers.Conv1DTranspose(filters, size, strides=strides,
                                     padding='same',
                                     kernel_initializer=initializer,
                                     use_bias=False))
@@ -50,7 +50,8 @@ def Generator1D(activation='sigmoid'):
   #padding_same の場合ceil(input_shape[i] / strides[i])だからセーフ！
 
   down_stack = [
-    downsample1D(64, 4, strides=1,  apply_batchnorm=False), # (bs, 128, 128, 64)
+    downsample1D(32, 4, strides=1, apply_batchnorm=False), #128
+    downsample1D(64, 4, strides=1, ), # (bs, 128, 128, 64) #128
     downsample1D(128, 4), # (bs, 64, 64, 128)
     downsample1D(256, 4), # (bs, 32, 32, 256)
     downsample1D(512, 4), # (bs, 16, 16, 512)
@@ -68,6 +69,7 @@ def Generator1D(activation='sigmoid'):
     upsample1D(256, 4), # (bs, 32, 32, 512)
     upsample1D(128, 4), # (bs, 64, 64, 256)
     upsample1D(64, 4), # (bs, 128, 128, 128) #concat済みの大きさ
+    upsample1D(32, 4, strides=1)
   ]
 
   initializer = tf.random_normal_initializer(0., 0.02)

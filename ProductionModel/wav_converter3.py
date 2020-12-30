@@ -44,7 +44,7 @@ def no_sound_interval(interval, len_wav):
         non_interval.append((cur_inv[1], nxt_inv[0]))
     return non_interval
 
-def no_sound_trimming(wav, top_db=40):
+def no_sound_trimming(wav, top_db=35):
     intervals = librosa.effects.split(wav, top_db=top_db, ref=np.mean, frame_length=256, hop_length=256)
     non_intervals = no_sound_interval(intervals, wav.shape[0])
     res_wav = librosa.effects.remix(wav, intervals=intervals)
@@ -63,7 +63,6 @@ def wav_splitting(wav, hop_length_sec=0.005):
     return f0, sp, ap, mel
 
 def splitter(data, mode,  base_length=128):
-    print(data.shape)
     dataset = list()
     length = (len(data) // base_length + 1) * base_length
     data_padded = data_padding(data, length, mode)
@@ -114,6 +113,24 @@ def mel_generation(mel_model, dataset):
     res_data = res_data.astype(np.float64)
     return res_data
 
+def sp_generation(sp_model, dataset):
+    res_data = list()
+    for data in dataset:
+        data = data[:, :256]
+        data = _normalize95(data)
+        data = np.expand_dims(data, axis=-1)
+        data = np.expand_dims(data, axis=0)
+        data = sp_model(data)
+        data = np.squeeze(data, axis=-1)
+        data = np.squeeze(data, axis=0)
+        data = _inv_normalize95(data)
+        data_base = np.zeros((128, 513-256)) + 1e-10
+        data = np.concatenate([data, data_base], axis=-1)
+        res_data.append(data)
+    res_data = np.concatenate(res_data, axis=0)
+    res_data = res_data.astype(np.float64)
+    return res_data
+
 def synthesize(f0, sp, ap, wav_playing=False):
     sp = sp + 1e-10
     wav = pyworld.synthesize(f0, sp, ap, fs)
@@ -133,21 +150,30 @@ def data_padding(data, length, mode):
 def normalize2(wav):
     return (wav - np.min(wav)) / (np.max(wav) - np.min(wav))
 
+def _normalize95(input):
+    input = input * (10.0 ** 10 - 1) + 1
+    input = input / (10.0 ** 5)
+    input = np.log(input) / np.log(10.0) / 5.0
+    return input
+
+def _inv_normalize95(input):
+    input = input * np.log(10.0) * 5.0
+    input = np.e ** input
+    input = (10 ** 5) * input
+    input = (input - 1 )/ (10.0 ** 10 -1)
+    return input
+
 def mel_converter():
     wav_path = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/DataStore2/Test.wav'
     wav = wav_file_loader(wav_path)
-    mel_model_name = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/ModelData2/pix2pix_freq1D_generator_epoch_80_mel'
-    mel_model_name = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/ModelData2/pix2pix_127_freq_generator_1D_epoch_80_mel'
-    mel_model_name = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/ModelData2/pix2pix_127_freq_generator_epoch_20_mel'
+    mel_model_name = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/ModelData2/yukarin_epoch_100_mel'
+    # mel_model_name = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/ModelData2/pix2pix_127_freq_generator_epoch_20_mel'
     mel_model = load_model(mel_model_name)
     wav = noise_reducer(wav)
     wav, non_intervals = no_sound_trimming(wav)
-    visualize(wav)
     f0, sp, ap, mel = wav_splitting(wav)
-    visualize(mel)
     mel_dataset = splitter(mel, 'mel')
     mel = mel_generation(mel_model, mel_dataset)
-    visualize(mel)
     wav = librosa.feature.inverse.mel_to_audio(mel.T, n_fft=pyworld.get_cheaptrick_fft_size(fs, 71.0),
                                           hop_length=librosa.time_to_samples(0.005, sr), sr=sr)
     visualize(wav)
@@ -185,8 +211,36 @@ def f0_mel_mel2_sp_converter():
     ap = data_padding(ap, (len(ap) // 128 + 1) * 128, 'ap')
     synthesize(f0, sp, ap, wav_playing=True)
 
+def sp_converter():
+    wav_path = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/DataStore2/Test.wav'
+    wav = wav_file_loader(wav_path)
+    sp_model_name = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/ModelData2/pix2pix_original_log_epoch_40_sp'
+    sp_model = load_model(sp_model_name)
+    wav = noise_reducer(wav)
+    wav, non_intervals = no_sound_trimming(wav)
+    f0, sp, ap, mel = wav_splitting(wav)
+
+    #####################################
+    f0_model_name = 'C:/Users/Atsuya/PycharmProjects/VoiceConverter/ProductionModel/ModelData2/pix2pix_original_log_epoch_200_f0'
+    f0_model = load_model(f0_model_name)
+    f0_dataset = splitter(f0, 'f0')
+    f0 = f0_generation(f0_model, f0_dataset)
+    #########################################
+
+    #######################
+    # f0 = f0 + 200
+    # f0 = data_padding(f0, (len(f0) // 128 + 1) * 128, 'f0')
+    #######################
+
+    sp_dataset = splitter(sp, 'sp')
+    sp = sp_generation(sp_model, sp_dataset)
+    ap = data_padding(ap, (len(ap) // 128 + 1) * 128, 'ap')
+
+    visualize(sp)
+    synthesize(f0, sp, ap, wav_playing=True)
+
 def main():
-    f0_mel_mel2_sp_converter()
+    sp_converter()
 
 if __name__=='__main__':
     main()

@@ -6,7 +6,7 @@ class Pix2PixConfig:
         #morethan datasize
         self.BUFFER_SIZE = 10000
         #なんか、BATCH size が　2以上にならん…。256にコードするとか？
-        self.BATCH_SIZE = 8
+        self.BATCH_SIZE = 64 #Use Instance Normalization
         self.OUTPUT_CHANNELS = 1
         self.INPUT_CHANNELS = 1
         self.EPOCHS = 200

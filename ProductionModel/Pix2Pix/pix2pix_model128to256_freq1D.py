@@ -4,7 +4,7 @@ config = Pix2PixConfig()
 import tensorflow_addons as tfa
 
 #downsample1D のstrideが2kernel_sizeがzize
-def downsample1D(filters, size, strides=1, apply_batchnorm=True):
+def downsample1D(filters, size, strides=2, apply_batchnorm=True):
   initializer = tf.random_normal_initializer(0., 0.02)
 
   result = tf.keras.Sequential()
@@ -22,12 +22,12 @@ def downsample1D(filters, size, strides=1, apply_batchnorm=True):
 
   return result
 
-def upsample1D(filters, size, apply_dropout=False):
+def upsample1D(filters, size, strides=2, apply_dropout=False):
   initializer = tf.random_normal_initializer(0., 0.02)
 
   result = tf.keras.Sequential()
   result.add(
-    tf.keras.layers.Conv1DTranspose(filters=filters, kernel_size=size, strides=1,
+    tf.keras.layers.Conv1DTranspose(filters=filters, kernel_size=size, strides=strides,
                                     padding='same',
                                     kernel_initializer=initializer,
                                     use_bias=False))
@@ -87,45 +87,37 @@ def GeneratorFreq1D(freq_len=128, upscale=False):
   inputs = tf.keras.layers.Input(shape=[128 , freq_len , 1])
 
   down_stack = [
-    downsample1D(64, 4, apply_batchnorm=False), # (bs, 128, 64)
-    downsample1D(128, 4), # (bs, 128,  128)
-    downsample1D(256, 4), # (bs, 128,  256)
-    downsample1D(512, 4), # (bs, 128, 512)
-    downsample1D(512, 4), # (bs, 128, 512)
-    downsample1D(512, 4), # (bs, 128, 512)
-    downsample1D(512, 4), # (bs, 128, 512)
-    downsample1D(512, 4), # (bs, 128, 512)
+    downsample1D(64, 3, apply_batchnorm=False), # (bs, 128, 63)
+    downsample1D(128, 3), # (bs, 128,  128)
+    downsample1D(256, 3), # (bs, 128,  256)
+    downsample1D(512, 3), # (bs, 128, 512)
+    downsample1D(512, 3), # (bs, 128, 512)
+    downsample1D(512, 3), # (bs, 128, 512)
+    downsample1D(512, 3), # (bs, 128, 512)
+    downsample1D(512, 3), # (bs, 128, 512)
+    downsample1D(512, 3)
   ]
 
   up_stack = [
-    upsample1D(512, 4, apply_dropout=True), # (bs, 128, 1024)
-    upsample1D(512, 4, apply_dropout=True), # (bs, 128, 1024)
-    upsample1D(512, 4, apply_dropout=True), # (bs, 128, 1024)
-    upsample1D(512, 4), # (bs, 128,  1024)
-    upsample1D(256, 4), # (bs, 128,  512)
-    upsample1D(128, 4), # (bs, 128,  256)
-    upsample1D(64, 4), # (bs, 128,  256) #concat済みの大きさ
+    upsample1D(512, 3, apply_dropout=True),
+    upsample1D(512, 3, apply_dropout=True), # (bs, 128, 1023)
+    upsample1D(512, 3, apply_dropout=True), # (bs, 128, 1023)
+    upsample1D(512, 3), # (bs, 128, 1023)
+    upsample1D(512, 3), # (bs, 128,  1023)
+    upsample1D(256, 3), # (bs, 128,  512)
+    upsample1D(128, 3), # (bs, 128,  256)
+    upsample1D(64, 3), # (bs, 128,  256) #concat済みの大きさ
   ]
-  
-  # up_stack = [
-  #   upsample1D2(128, 128, 512, 4, apply_dropout=True),
-  #   upsample1D2(128, 128, 512, 4, apply_dropout=True),
-  #   upsample1D2(128, 128, 512, 4, apply_dropout=True),
-  #   upsample1D2(128, 128, 512, 4),
-  #   upsample1D2(128, 128, 256, 4),
-  #   upsample1D2(128, 128, 128, 4),
-  #   upsample1D2(128, 128, 64, 4)
-  # ]
 
   initializer = tf.random_normal_initializer(0., 0.02)
 
-  pre_first1 = tf.keras.layers.Conv2D(kernel_size=4, filters=32, strides=(1, 1), padding='same', kernel_initializer=initializer, use_bias=False)
+  pre_first1 = tf.keras.layers.Conv2D(kernel_size=3, filters=32, strides=(1, 1), padding='same', kernel_initializer=initializer, use_bias=False)
 
   first = tf.keras.layers.Conv2D(filters=config.OUTPUT_CHANNELS, kernel_size=4, kernel_initializer=initializer, strides=1, padding='SAME')
 
-  pre_last = tf.keras.layers.Conv2D(kernel_size=4, filters=32, strides=(1, 1), padding='same', kernel_initializer=initializer, use_bias=False)
+  pre_last = tf.keras.layers.Conv2D(kernel_size=3, filters=32, strides=(1, 1), padding='same', kernel_initializer=initializer, use_bias=False)
 
-  last = tf.keras.layers.Conv2D(filters=config.OUTPUT_CHANNELS, kernel_size=4, kernel_initializer=initializer, strides=1, padding='SAME', activation='sigmoid')
+  last = tf.keras.layers.Conv2D(filters=config.OUTPUT_CHANNELS, kernel_size=3, kernel_initializer=initializer, strides=1, padding='SAME', activation='sigmoid')
 
 
   x = inputs

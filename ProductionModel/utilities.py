@@ -79,9 +79,15 @@ def world_decompose(wav, fs, frame_period = 5.0):
     return f0, timeaxis, sp, ap
 
 
-def visualize(data, title1=None, title2=None):
+def visualize(data, title1=None, title2=None, title3=None):
     try:
         plt.plot(data)
+        if title1 is not None: plt.title(title1)
+        plt.show()
+    except:
+        pass
+    try:
+        plt.plot(np.transpose(data))
         if title1 is not None: plt.title(title1)
         plt.show()
     except:
@@ -92,6 +98,13 @@ def visualize(data, title1=None, title2=None):
         plt.show()
     except:
         pass
+    try:
+        if title3 is not None: plt.title(title3)
+        plt.imshow(data)
+        plt.show()
+    except:
+        pass
+
 
 def generate_images(model, test_input):
   prediction = model(test_input, training=True)

@@ -75,30 +75,50 @@ def upsample2(kernel_size, in_height, out_height, in_width, out_width, output_ch
 # #時間方向にのみ畳み込む >> Freqencyの特徴量はkernelサイズで抽出
 def GeneratorFreq(freq_len=256, activation="sigmoid", use_upscale=False):
   inputs = tf.keras.layers.Input(shape=[128, freq_len ,1])
-  # inputs = tf.keras.layers.Input(shape=[128, 513, 1])
 
-  down_stack = [
-    downsample(32, (4, 4), strides=(1, 1),  apply_batchnorm=False), # (bs, 128, 128, 64)
-    downsample(32, (4, 4), strides=(1, 1)), # (bs, 64, 64, 128)
-    downsample(32, (4, 4), strides=(1, 1)), # (bs, 32, 32, 256)
-    downsample(32, (4, 4), strides=(1, 1)), # (bs, 16, 16, 512)
-    downsample(32, (4, 4), strides=(1, 1)), # (bs, 8, 8, 512)
-    downsample(32, (4, 4), strides=(1, 1)), # (bs, 4, 4, 512)
-    downsample(32, (4, 4), strides=(1, 1)), # (bs, 2, 2, 512)
-    downsample(32, (4, 4), strides=(1, 1)), # (bs, 1, 1, 512)
-    downsample(32, (4, 4), strides=(1, 1)),  # (bs, 1, 1, 512)
-  ]
+  if freq_len / 128 > 1:
+    down_stack = [
+      downsample(32, (3, 3), strides=(1, 1),  apply_batchnorm=False), # (bs, 128, 128, 64)
+      downsample(32, (3, 3), strides=(1, 1)),  # (bs, 64, 64, 128)
+      downsample(32, (3, 3), strides=(1, 1)),  # (bs, 32, 32, 256)
+      downsample(32, (3, 3), strides=(1, 1)),  # (bs, 16, 16, 512)
+      downsample(32, (3, 3), strides=(1, 1)),  # (bs, 8, 8, 512)
+      downsample(32, (3, 3), strides=(1, 1)),  # (bs, 4, 4, 512)
+      downsample(32, (3, 3), strides=(1, 1)),  # (bs, 2, 2, 512)
+      # downsample(32, (3, 3), strides=(1, 1)), # (bs, 1, 1, 512)
+    ]
 
-  up_stack = [
-    upsample(32, (4, 4), strides=(1, 1), apply_dropout=True), # (bs, 2, 2, 1024)
-    upsample(32, (4, 4), strides=(1, 1), apply_dropout=True), # (bs, 4, 4, 1024)
-    upsample(32, (4, 4), strides=(1, 1), apply_dropout=True), # (bs, 8, 8, 1024)
-    upsample(32, (4, 4), strides=(1, 1)), # (bs, 16, 16, 1024)
-    upsample(32, (4, 4), strides=(1, 1)), # (bs, 32, 32, 512)
-    upsample(32, (4, 4), strides=(1, 1)), # (bs, 64, 64, 256)
-    upsample(32, (4, 4), strides=(1, 1)), # (bs, 128, 128, 128) #concat済みの大きさ
-    upsample(32, (4, 4), strides=(1, 1)),  # (bs, 128, 128, 128) #concat済みの大きさ
-  ]
+    up_stack = [
+      # upsample(32, (3, 3), strides=(1, 1), apply_dropout=True), # (bs, 2, 2, 1024)
+      upsample(32, (3, 3), strides=(1, 1), apply_dropout=True),  # (bs, 4, 4, 1024)
+      upsample(32, (3, 3), strides=(1, 1), apply_dropout=True),  # (bs, 8, 8, 1024)
+      upsample(32, (3, 3), strides=(1, 1)),  # (bs, 16, 16, 1024)
+      upsample(32, (3, 3), strides=(1, 1)),  # (bs, 32, 32, 512)
+      upsample(32, (3, 3), strides=(1, 1)),  # (bs, 64, 64, 256)
+      upsample(32, (3, 3), strides=(1, 1)), # (bs, 128, 128, 128) #concat済みの大きさ
+    ]
+
+  else:
+    down_stack = [
+      downsample(32, (3, 3), strides=(1, 1),  apply_batchnorm=False), # (bs, 128, 128, 64)
+      downsample(32, (3, 3), strides=(1, 1)), # (bs, 64, 64, 128)
+      downsample(32, (3, 3), strides=(1, 1)), # (bs, 32, 32, 256)
+      downsample(32, (3, 3), strides=(1, 1)), # (bs, 16, 16, 512)
+      downsample(32, (3, 3), strides=(1, 1)), # (bs, 8, 8, 512)
+      downsample(32, (3, 3), strides=(1, 1)), # (bs, 4, 4, 512)
+      downsample(32, (3, 3), strides=(1, 1)), # (bs, 2, 2, 512)
+      downsample(32, (3, 3), strides=(1, 1)), # (bs, 1, 1, 512)
+    ]
+
+    up_stack = [
+      upsample(32, (3, 3), strides=(1, 1), apply_dropout=True), # (bs, 2, 2, 1024)
+      upsample(32, (3, 3), strides=(1, 1), apply_dropout=True), # (bs, 4, 4, 1024)
+      upsample(32, (3, 3), strides=(1, 1), apply_dropout=True), # (bs, 8, 8, 1024)
+      upsample(32, (3, 3), strides=(1, 1)), # (bs, 16, 16, 1024)
+      upsample(32, (3, 3), strides=(1, 1)), # (bs, 32, 32, 512)
+      upsample(32, (3, 3), strides=(1, 1)), # (bs, 64, 64, 256)
+      upsample(32, (3, 3), strides=(1, 1)), # (bs, 128, 128, 128) #concat済みの大きさ
+    ]
 
   initializer = tf.random_normal_initializer(0., 0.02)
   last = tf.keras.layers.Conv2DTranspose(config.OUTPUT_CHANNELS, (4, 4),
@@ -108,6 +128,12 @@ def GeneratorFreq(freq_len=256, activation="sigmoid", use_upscale=False):
                                          activation=activation) # (bs, 256, 256, 3)
 
   x = inputs
+
+  if freq_len/128 > 1:
+    x = downsample(32, (3, 3), strides=(1, 1), apply_batchnorm=False)(x)
+    first_skip = x
+    x = downsample(32, (3, 3), strides=(1, int(freq_len/128)), apply_batchnorm=False)(x)
+    second_skip = x
 
   # Downsampling through the model
   skips = []
@@ -125,6 +151,12 @@ def GeneratorFreq(freq_len=256, activation="sigmoid", use_upscale=False):
   if use_upscale:
     x = upsample2(kernel_size=4, in_height=128, in_width=128, out_height=128, out_width=256, output_channel=64)(x)
     x = upsample2(kernel_size=4, in_height=128, in_width=256, out_height=128, out_width=513, output_channel=32)(x) #128 >> 256 >> 513
+
+  if freq_len/128 > 1:
+    x = upsample(32, (3, 3), strides=(1, 1), apply_dropout=False)(x)
+    x = tf.keras.layers.Concatenate()([x, second_skip])
+    x = upsample(32, (3, 3), strides=(1, int(freq_len/128)), apply_dropout=False)(x)
+    x = tf.keras.layers.Concatenate()([x, first_skip])
 
   x = last(x)
 
